@@ -50,17 +50,11 @@ class BankOfCordaRPCClientTest {
                     ::CashIssueFlow,
                     1000.DOLLARS,
                     BIG_CORP_PARTY_REF,
-<<<<<<< HEAD
                     nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
             bocProxy.startFlow(
                     ::CashPaymentFlow,
                     1000.DOLLARS,
-                    nodeBigCorporation.nodeInfo.legalIdentity,
-                    anonymous).returnValue.getOrThrow()
-=======
-                    nodeBankOfCorda.nodeInfo.legalIdentity,
-                    nodeBankOfCorda.nodeInfo.notaryIdentity).returnValue.getOrThrow()
->>>>>>> Enable confidential identities
+                    nodeBigCorporation.nodeInfo.legalIdentity).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
