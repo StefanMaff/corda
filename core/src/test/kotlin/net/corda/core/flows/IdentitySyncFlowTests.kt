@@ -6,6 +6,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
@@ -43,15 +44,16 @@ class IdentitySyncFlowTests {
         bobNode.services.identityService.verifyAndRegisterIdentity(aliceNode.info.legalIdentityAndCert)
         bobNode.services.identityService.verifyAndRegisterIdentity(notaryNode.info.legalIdentityAndCert)
 
-        // Alice issues some cash to a new confidential identity that Bob doesn't know about
+        // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val ref = OpaqueBytes.of(0x01)
-        val issueFlow = aliceNode.services.startFlow(CashIssueFlow(1000.DOLLARS, ref, alice, notaryNode.services.myInfo.notaryIdentity))
-        val issueTx = issueFlow.resultFuture.getOrThrow().stx
-        val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
+        val anonymous = true
+        aliceNode.services.startFlow(CashIssueFlow(1000.DOLLARS, ref, notaryNode.services.myInfo.notaryIdentity)).resultFuture.getOrThrow().stx
+        val paymentTx = aliceNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).resultFuture.getOrThrow().stx
+        val confidentialIdentity = paymentTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.services.identityService.partyFromAnonymous(confidentialIdentity))
 
         // Run the flow to sync up the identities
-        aliceNode.services.startFlow(IdentitySyncFlow(bob, issueTx.tx)).resultFuture.getOrThrow()
+        aliceNode.services.startFlow(IdentitySyncFlow(bob, paymentTx.tx)).resultFuture.getOrThrow()
         val expected = aliceNode.services.identityService.partyFromAnonymous(confidentialIdentity)
         val actual = bobNode.services.identityService.partyFromAnonymous(confidentialIdentity)
         assertEquals(expected, actual)
