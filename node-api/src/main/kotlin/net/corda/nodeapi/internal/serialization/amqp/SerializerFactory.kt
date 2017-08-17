@@ -59,10 +59,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+        println ("get - $declaredType")
         val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
                 "Declared types of $declaredType are not supported.")
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+
+        println ("actual type - $actualType")
 
         val serializer = if (Collection::class.java.isAssignableFrom(declaredClass)) {
             serializersByType.computeIfAbsent(declaredType) {
