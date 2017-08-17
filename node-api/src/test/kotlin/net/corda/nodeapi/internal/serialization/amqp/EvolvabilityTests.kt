@@ -13,6 +13,8 @@ class EvolvabilityTests {
 
         val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.test1")
         println ("PATH = $path")
+        val f = File(path.toURI())
+        println (f.readLines())
         /*
         val sf = SerializerFactory()
         println (sf)
