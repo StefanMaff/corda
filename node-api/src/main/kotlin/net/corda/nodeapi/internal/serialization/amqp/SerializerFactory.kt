@@ -19,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
+data class schemaAndDescriptor (val schema: Schema, val typeDescriptor: Any)
+
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
@@ -50,6 +52,13 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     private val classCarpenter = ClassCarpenter(cl)
     val classloader : ClassLoader
         get() = classCarpenter.classloader
+
+    fun getEvolutionSerializer(schema: schemaAndDescriptor, newSerializer: ObjectSerializer) : AMQPSerializer<Any> {
+        return serializersByDescriptor.computeIfAbsent(schema.typeDescriptor) {
+            println ("IT'S MISSING")
+            EvolutionSerializer.make(schema, newSerializer, this)
+        }
+    }
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -161,7 +170,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
     @Throws(NotSerializableException::class)
     fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
-            processSchema(schema)
+            processSchema(schemaAndDescriptor(schema, typeDescriptor))
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
         }()
     }
@@ -184,14 +193,19 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
      * Iterate over an AMQP schema, for each type ascertain weather it's on ClassPath of [classloader] amd
      * if not use the [ClassCarpenter] to generate a class to use in it's place
      */
-    private fun processSchema(schema: Schema, sentinel: Boolean = false) {
+    private fun processSchema(schema: schemaAndDescriptor, sentinel: Boolean = false) {
         val carpenterSchemas = CarpenterSchemas.newInstance()
-        for (typeNotation in schema.types) {
-            println("processSchema: ${typeNotation.descriptor} ${typeNotation.name}")
+        for (typeNotation in schema.schema.types) {
             try {
-                processSchemaEntry(typeNotation)
+                val serialiser = processSchemaEntry(typeNotation)
+
+                // if we just sucessfully built a serialiser for the type but the type fingerprint
+                // doesn't match that of the serialised object then we are dealing with an older
+                // instance of the class, as such we need to build an evolverSerilaiser
+                if (serialiser.typeDescriptor != schema.typeDescriptor) {
+                    getEvolutionSerializer(schema, serialiser as ObjectSerializer)
+                }
             } catch (e: ClassNotFoundException) {
-                println("poop")
                 if (sentinel || (typeNotation !is CompositeType)) throw e
                 typeNotation.carpenterSchema(classloader, carpenterSchemas = carpenterSchemas)
             }
@@ -204,24 +218,22 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) {
-        when (typeNotation) {
+    private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
             is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
             is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
-    }
 
-    private fun processRestrictedType(typeNotation: RestrictedType) {
+    private fun processRestrictedType(typeNotation: RestrictedType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
-        get(null, type)
+        return get(null, type)
     }
 
-    private fun processCompositeType(typeNotation: CompositeType) {
+    private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         println("processCompositeType")
         val type = typeForName(typeNotation.name, classloader)
-        get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
+        return get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
