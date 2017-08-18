@@ -321,6 +321,7 @@ class SerializerFactory(val whitelist: ClassWhitelist, cl : ClassLoader) {
             }
             is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+            is WildcardType -> TODO("Implement WildcardType for ${type}")
             else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
