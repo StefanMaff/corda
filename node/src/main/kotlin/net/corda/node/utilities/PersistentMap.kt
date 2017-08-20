@@ -46,13 +46,16 @@ class PersistentMap<K, V, E, EK> (
         }
     }
 
-    operator fun get(key: K): V? {
+    override operator fun get(key: K): V? {
         return cache.get(key).orElse(null)
     }
 
     fun all(): Sequence<Pair<K, V>> {
         return cache.asMap().map { entry -> Pair(entry.key as K, entry.value as V) }.asSequence()
     }
+
+
+    override val size = all().count()
 
     private tailrec fun set(key: K, value: V, logWarning: Boolean = true, store: (K,V) -> V?): Boolean {
         var insertionAttempt = false
@@ -121,13 +124,13 @@ class PersistentMap<K, V, E, EK> (
     /**
      * Removes the mapping for the specified key from this map and underlying storage if present.
      */
-    fun remove(key: K): V? {
+    override fun remove(key: K): V? {
         val result = cache.get(key).orElse(null)
         cache.invalidate(key)
         return result
     }
 
-    private class NotReallyMutableEntry<K, V>(key: K, value: V/*, val seqNo: Int*/) : AbstractMap.SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
+    private class NotReallyMutableEntry<K, V>(key: K, value: V) : AbstractMap.SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
         override fun setValue(newValue: V): V {
             throw UnsupportedOperationException("Not really mutable.  Implement if really required.")
         }
