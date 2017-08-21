@@ -87,8 +87,9 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService })): VaultService {
-        val vaultService = NodeVaultService(this)
+    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties(), { identityService }),
+                         storeIrrelevantStates: Boolean = false): VaultService {
+        val vaultService = NodeVaultService(this, storeIrrelevantStates)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
@@ -228,7 +229,7 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
     val mockService = database.transaction {
         val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), databaseProperties,  identitySvc = identitySvc)
         object : MockServices(*(keys.toTypedArray())) {
-            override val vaultService: VaultService = makeVaultService(hibernateConfig)
+            override val vaultService: VaultService = makeVaultService(hibernateConfig, storeIrrelevantStates)
 
             override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                 for (stx in txs) {
