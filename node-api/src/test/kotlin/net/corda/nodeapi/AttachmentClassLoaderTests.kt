@@ -265,6 +265,14 @@ class AttachmentClassLoaderTests : TestDependencyInjectionBase() {
         assertNotNull(state3)
     }
 
+    @Test
+    fun `test serialization of SecureHash`() {
+        val secureHash = SecureHash.randomSHA256()
+        val bytes = secureHash.serialize()
+        val copiedSecuredHash = bytes.deserialize()
+
+        assertEquals(secureHash.bytes, copiedSecuredHash.bytes)
+    }
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
