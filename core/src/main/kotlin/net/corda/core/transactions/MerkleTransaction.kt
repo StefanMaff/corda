@@ -41,6 +41,7 @@ fun computeNonce(privacySalt: PrivacySalt, index: Int) = (privacySalt.bytes + By
  * The [availableComponents] property is used for calculation of the transaction's [MerkleTree], which is in
  * turn used to derive the ID hash.
  */
+@CordaSerializable
 interface TraversableTransaction {
     val inputs: List<StateRef>
     val attachments: List<SecureHash>
