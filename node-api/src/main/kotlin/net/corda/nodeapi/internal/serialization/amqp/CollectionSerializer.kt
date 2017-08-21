@@ -5,6 +5,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.Collection
 import kotlin.collections.LinkedHashSet
 import kotlin.collections.Set
@@ -22,7 +23,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
                 List::class.java to { list -> Collections.unmodifiableList(list) },
                 Set::class.java to { list -> Collections.unmodifiableSet(LinkedHashSet(list)) },
                 SortedSet::class.java to { list -> Collections.unmodifiableSortedSet(TreeSet(list)) },
-                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) }
+                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) },
+                ArrayList::class.java to { list -> Collections.unmodifiableList(list) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {
