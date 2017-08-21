@@ -1,14 +1,24 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
-import java.lang.reflect.Type
 import org.apache.qpid.proton.codec.Data
+import java.lang.reflect.Type
+import java.io.NotSerializableException
 
 class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
-        override val propertySerializers: Collection<PropertySerializer>,
-        argumentMap: ArrayList<Int?>) : ObjectSerializer (clazz, factory) {
+        val oldParams : Map<String, oldParam>,
+        val newArgs : List<String>) : ObjectSerializer (clazz, factory) {
+
+    override val propertySerializers: Collection<PropertySerializer>
+
+    data class oldParam (val type: String, val aType: Type, val idx: Int, val property: PropertySerializer)
+
+    init {
+        propertySerializers = listOf()
+    }
+
     companion object {
         /**
          * Build a serialization object for deserialisation only of objects serislaised
@@ -20,30 +30,21 @@ class EvolutionSerializer(
         fun make (old: schemaAndDescriptor, new: ObjectSerializer,
                   factory: SerializerFactory) : AMQPSerializer<Any> {
 
-            val fields = (old.schema.types.first() as CompositeType).fields
-            val fieldSerializers : MutableList<PropertySerializer> = ArrayList(fields.size)
-
-            data class oldParam (val type: String, val aType: Type, val pos: Int)
             val oldArgs = mutableMapOf<String, oldParam>()
             // so this will be the values as they are in the blob, we need a set of property
             // serializers to read them as we would normally
             var idx = 0
             (old.schema.types.first() as CompositeType).fields.forEach {
-                val name = it.name
                 val returnType = it.getTypeAsClass(factory.classloader)
-                fieldSerializers += PropertySerializer.make(name, null, returnType, factory)
-                oldArgs[it.name] = oldParam(it.type, returnType, idx++)
+                oldArgs[it.name] = oldParam(
+                        it.type, returnType, idx++, PropertySerializer.make(it.name, null, returnType, factory))
             }
 
             // the set of arguments the current class state requires for construction, we need
             // to map the data we get out of the file onto the new classes constructor
-            idx = 0
-            val listy = arrayListOf<Int?>()
-            new.propertySerializers.forEach {
-                listy += oldArgs[it.name]?.pos ?: -1
-            }
+//            val listy = mutableListOf<String?>()
 
-            return EvolutionSerializer(new.type, factory, fieldSerializers, listy)
+            return EvolutionSerializer(new.type, factory, oldArgs, new.propertySerializers.map { it.name })
         }
     }
 
@@ -52,26 +53,12 @@ class EvolutionSerializer(
     }
 
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
-        println ("WEARING THE PANTS OF FIRE")
+        if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
-        // these are the parameters as they were when we were serialised, this no longer matches
-        // the classes constructor so we need to apply our mapping
-        val params = (obj as List<*>).zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
-
-        println (params)
-
-        /*
-        if (obj is UnsignedInteger) {
-            // TODO: Object refs
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        } else if (obj is List<*>) {
-            if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
-            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
-            return construct(params)
-        } else throw NotSerializableException("Body of described type is unexpected $obj")
-        */
-
-        return true
+        return construct(newArgs.flatMap {
+            val param = oldParams[it]
+            listOf(param?.property?.readProperty(obj[param.idx], schema, input))
+        })
     }
 }
 

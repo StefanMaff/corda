@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.SerializedBytes
 import org.junit.Test
 import java.io.File
+import kotlin.test.assertEquals
 
 class EvolvabilityTests {
 
@@ -12,10 +13,13 @@ class EvolvabilityTests {
         val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.simpleOrderSwapSameType")
         val f = File(path.toURI())
 
+        val A = 1
+        val B = 2
+
         // Original version of the class for the serialised version of this class
         //
         //data class C (val a: Int, val b: Int)
-        //val sc = SerializationOutput(sf).serialize(C(1, 2))
+        //val sc = SerializationOutput(sf).serialize(C(A, B))
         //f.writeBytes(sc.bytes)
 
         // new version of the class, in this case the order of the parameters has been swapped
@@ -24,8 +28,8 @@ class EvolvabilityTests {
         val sc2 = f.readBytes()
         var deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
-        println (deserializedC.a)
-        println (deserializedC.b)
+        assertEquals(A, deserializedC.a)
+        assertEquals(B, deserializedC.b)
     }
 
     @Test
@@ -57,12 +61,12 @@ class EvolvabilityTests {
         val f = File(path.toURI())
 
         // Original version of the class as it was serialised
-        //
-        // data class C (val a: Int)
-        // var sc = SerializationOutput(sf).serialize(C(1))
-        // f.writeBytes(sc.bytes)
+        //data class C(val a: Int)
+        //var sc = SerializationOutput(sf).serialize(C(1))
+        //f.writeBytes(sc.bytes)
+        //println ("Path = $path")
 
-        // new version of the class, in this case a new parameter has been added (b
+        // new version of the class, in this case a new parameter has been added (b)
         data class C (val a: Int, val b: Int?)
 
         val sc2 = f.readBytes()
