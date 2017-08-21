@@ -143,7 +143,7 @@ manner:
         rpcUsers = [
                 ['username' : "user",
                  'password' : "password",
-                 'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
+                 'permissions' : ["StartFlow.net.corda.finance.flows.CashFlow"]]
         ]
 
 You can then deploy and launch the nodes (Notary and Alice) as follows:
