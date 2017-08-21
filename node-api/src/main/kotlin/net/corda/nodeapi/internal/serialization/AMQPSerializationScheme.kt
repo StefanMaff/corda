@@ -1,10 +1,12 @@
 package net.corda.nodeapi.internal.serialization
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.amqp.AmqpHeaderV1_0
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
@@ -23,6 +25,8 @@ abstract class AbstractAMQPSerializationScheme : SerializationScheme {
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
                 register(net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer(this))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OpaqueBytesSerializer(OpaqueBytes::class.java))
+                register(net.corda.nodeapi.internal.serialization.amqp.custom.OpaqueBytesSerializer(SecureHash::class.java))
             }
         }
     }
