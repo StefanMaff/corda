@@ -6,7 +6,9 @@ import kotlin.test.assertEquals
 
 class DeserializedParameterizedTypeTests {
     private fun normalise(string: String): String {
-        return string.replace(" ", "")
+        return string
+                .replace(" ", "")
+                .replace("<?>", "")
     }
 
     private fun verify(typeName: String) {
@@ -32,6 +34,11 @@ class DeserializedParameterizedTypeTests {
     @Test
     fun `test trailing whitespace`() {
         verify("java.util.Map<java.lang.String, java.lang.Integer> ")
+    }
+
+    @Test
+    fun `test list of commands`() {
+        verify("java.util.List<net.corda.core.contracts.Command<?>>")
     }
 
     @Test(expected = NotSerializableException::class)
