@@ -36,7 +36,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-@CordaSerializable
 interface DummyContractBackdoor {
     fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
     fun inspectState(state: ContractState): Int
