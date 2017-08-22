@@ -20,7 +20,8 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
         }
         // We do not check bounds.  Both our use cases (Collection and Map) are not bounded.
-        if (rawType.typeParameters.any { boundedType(it) }) throw NotSerializableException("Bounded types in ParameterizedTypes not supported, but found a bound in $rawType")
+        // VK: Doesn't cater well for: net.corda.core.contracts.TransactionState
+        //if (rawType.typeParameters.any { boundedType(it) }) throw NotSerializableException("Bounded types in ParameterizedTypes not supported, but found a bound in $rawType")
     }
 
     private fun boundedType(type: TypeVariable<out Class<out Any>>): Boolean {
@@ -96,7 +97,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                             typeStart = pos++
                         } else if (!needAType) {
                             throw NotSerializableException("Not expecting a type")
-                        } else if (params[pos] == '*') {
+                        } else if (params[pos] == '*' || params[pos] == '?') {
                             pos++
                         } else if (!params[pos].isJavaIdentifierStart()) {
                             throw NotSerializableException("Invalid character at start of type: ${params[pos]}")
